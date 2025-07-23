@@ -1,69 +1,39 @@
-repeat task.wait() until game:IsLoaded()
-
 local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local request = http_request or syn and syn.request or request or (fluxus and fluxus.request)
 
-if not request then
-    return warn("❌ Exploit không hỗ trợ HTTP Request.")
-end
-local api_url = "https://dfc20de2-9f2b-4b16-b0d0-16032ee9345e-00-1npj8usqtd1ky.sisko.replit.dev"
+-- 🧩 Lấy thông tin người dùng từ getgenv()
+local key = getgenv().Key or "nil"
+local id = getgenv().ID or "nil"
 
--- 🔐 Hàm kiểm tra xác thực /validate
-local function validateUser()
-    local response = request({
-        Url = api_url .. "/validate",
-        Method = "POST",
-        Headers = {
-            ["Content-Type"] = "application/json"
-        },
-        Body = HttpService:JSONEncode({
-            key = key,
-            id = id,
-            hwid = hwid
-        })
+-- ⚙️ Tự tạo HWID (đơn giản)
+local hwid = "hwid-" .. tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+
+-- ✅ Request hỗ trợ mọi executor
+local request = http_request or request or (syn and syn.request) or (fluxus and fluxus.request)
+if not request then return error("❌ Exploit không hỗ trợ HTTP Request.") end
+
+-- 📡 Gửi request xác thực
+local api = "https://dfc20de2-9f2b-4b16-b0d0-16032ee9345e-00-1npj8usqtd1ky.sisko.replit.dev/validate"
+local response = request({
+    Url = api,
+    Method = "POST",
+    Headers = {
+        ["Content-Type"] = "application/json"
+    },
+    Body = HttpService:JSONEncode({
+        key = key,
+        id = id,
+        hwid = hwid
     })
+})
 
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(response.Body)
-    end)
+local result = HttpService:JSONDecode(response.Body)
+if result.valid then
+    print("✅ Xác thực thành công. Đang tải script...")
 
-    if success and result and result.valid then
-        return true
-    else
-        return false, (result and result.error) or "Lỗi xác thực không rõ."
-    end
-end
-
--- 📜 Hàm lấy và chạy script từ API nếu hợp lệ
-local function getScript()
-    local response = request({
-        Url = api_url .. "/getscript",
-        Method = "POST",
-        Headers = {
-            ["Content-Type"] = "application/json"
-        },
-        Body = HttpService:JSONEncode({ id = id })
-    })
-
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(response.Body)
-    end)
-
-    if success and result and result.script then
-        print("✅ Đang tải script từ server...")
-        loadstring(result.script)()
-    else
-        warn("❌ Không thể tải script:", (result and result.error) or "Lỗi không xác định.")
-    end
-end
-
--- 🚀 Chạy xác thực và tải script nếu hợp lệ
-local ok, err = validateUser()
-if ok then
-    print("✅ Xác thực thành công. Đang chạy script...")
-    getScript()
+    -- 🧠 Tải script gốc từ GitHub hoặc API khác
+    local source = game:HttpGet("https://raw.githubusercontent.com/bqubwknjdx/xbxcb/main/main.lua")
+    loadstring(source)()
 else
-    warn("❌ Xác thực thất bại:", err)
+    warn("❌ Xác thực thất bại:", result.error or "Không rõ lý do")
 end
+
